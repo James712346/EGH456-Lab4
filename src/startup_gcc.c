@@ -23,9 +23,9 @@
 //*****************************************************************************
 
 #include <stdint.h>
-#include <inc/hw_nvic.h>
-#include <inc/hw_types.h>
-#include <port.h>
+#include "inc/hw_nvic.h"
+#include "inc/hw_types.h"
+
 //*****************************************************************************
 //
 // Forward declaration of the default fault handlers.
@@ -44,10 +44,7 @@ static void IntDefaultHandler(void);
 extern void xPortPendSVHandler(void);
 extern void vPortSVCHandler(void);
 extern void xPortSysTickHandler(void);
-
-extern void xGPIOHandlerH(void);
-extern void xGPIOHandlerN(void);
-extern void xGPIOHandlerM(void);
+extern void xButtonsHandler(void);
 
 //*****************************************************************************
 //
@@ -62,6 +59,7 @@ extern int main(void);
 //
 //*****************************************************************************
 static uint32_t pui32Stack[256];
+extern void I2C0IntHandler(void);
 
 //*****************************************************************************
 //
@@ -97,7 +95,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // UART0 Rx and Tx
     IntDefaultHandler,                      // UART1 Rx and Tx
     IntDefaultHandler,                      // SSI0 Rx and Tx
-    IntDefaultHandler,                      // I2C0 Master and Slave
+    I2C0IntHandler,                      // I2C0 Master and Slave
     IntDefaultHandler,                      // PWM Fault
     IntDefaultHandler,                      // PWM Generator 0
     IntDefaultHandler,                      // PWM Generator 1
@@ -121,7 +119,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // FLASH Control
     IntDefaultHandler,                      // GPIO Port F
     IntDefaultHandler,                      // GPIO Port G
-    xGPIOHandlerH,                          // GPIO Port H
+    IntDefaultHandler,                      // GPIO Port H
     IntDefaultHandler,                      // UART2 Rx and Tx
     IntDefaultHandler,                      // SSI1 Rx and Tx
     IntDefaultHandler,                      // Timer 3 subtimer A
@@ -140,7 +138,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // ADC1 Sequence 2
     IntDefaultHandler,                      // ADC1 Sequence 3
     IntDefaultHandler,                      // External Bus Interface 0
-    IntDefaultHandler,                      // GPIO Port J
+    IntDefaultHandler,                        // GPIO Port J
     IntDefaultHandler,                      // GPIO Port K
     IntDefaultHandler,                      // GPIO Port L
     IntDefaultHandler,                      // SSI2 Rx and Tx
@@ -161,8 +159,8 @@ void (* const g_pfnVectors[])(void) =
     0,                                      // Reserved
     IntDefaultHandler,                      // I2C4 Master and Slave
     IntDefaultHandler,                      // I2C5 Master and Slave
-    xGPIOHandlerM,                          // GPIO Port M
-    xGPIOHandlerN,                          // GPIO Port N
+    IntDefaultHandler,                      // GPIO Port M
+    IntDefaultHandler,                      // GPIO Port N
     0,                                      // Reserved
     IntDefaultHandler,                      // Tamper
     IntDefaultHandler,                      // GPIO Port P (Summary or P0)
