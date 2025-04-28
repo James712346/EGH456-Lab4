@@ -14,7 +14,11 @@
 #include "driverlib/i2c.h"
 #include "utils/uartstdio.h"
 #include "driverlib/sysctl.h"
+#include "FreeRTOS.h"
+#include "semphr.h"
 
+
+SemaphoreHandle_t xI2CSemaphore;
 /*
  * Sets slave address to ui8Addr
  * Puts ui8Reg followed by two data bytes in *data and transfers
@@ -28,16 +32,16 @@ bool writeI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data)
     // Place the character to be sent in the data register
     I2CMasterDataPut(I2C2_BASE, ui8Reg);
     I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_SEND_START);
-    while(I2CMasterBusy(I2C2_BASE)) { }
+    xSemaphoreTake(xI2CSemaphore, portMAX_DELAY);
 
     // Send Data
     I2CMasterDataPut(I2C2_BASE, data[0]);
     I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_SEND_CONT);
-    while(I2CMasterBusy(I2C2_BASE)) { }
+    xSemaphoreTake(xI2CSemaphore, portMAX_DELAY);
 
     I2CMasterDataPut(I2C2_BASE, data[1]);
     I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_SEND_FINISH);
-    while(I2CMasterBusBusy(I2C2_BASE)) { }
+    xSemaphoreTake(xI2CSemaphore, portMAX_DELAY);
 
     return true;
 }
@@ -59,18 +63,18 @@ bool readI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data)
     // Place the character to be sent in the data register
     I2CMasterDataPut(I2C2_BASE, ui8Reg);
     I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_SINGLE_SEND);
-    while(I2CMasterBusy(I2C2_BASE)) { }
+    xSemaphoreTake(xI2CSemaphore, portMAX_DELAY);
 
     // Load device slave address and change I2C to read
     I2CMasterSlaveAddrSet(I2C2_BASE, ui8Addr, true);
 
     // Read two bytes from I2C
     I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_RECEIVE_START);
-    while(I2CMasterBusy(I2C2_BASE)) { }
+    xSemaphoreTake(xI2CSemaphore, portMAX_DELAY);
     data[0] = I2CMasterDataGet(I2C2_BASE);
 
     I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
-    while(I2CMasterBusy(I2C2_BASE)) { }
+    xSemaphoreTake(xI2CSemaphore, portMAX_DELAY);
     data[1] = I2CMasterDataGet(I2C2_BASE);
 
     return true;
