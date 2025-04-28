@@ -182,9 +182,13 @@ void vCreateLEDTask( void )
     //
     // The I2C0 peripheral must be enabled before use.
     //
+    SysCtlPeripheralReset(SYSCTL_PERIPH_I2C2);
     UARTprintf("1\n");
     SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C2);
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
+
+    while(!SysCtlPeripheralReady(SYSCTL_PERIPH_I2C2));
+    while(!SysCtlPeripheralReady(SYSCTL_PERIPH_GPION));
 
     //
     // Configure the pin muxing for I2C0 functions on port B2 and B3.
