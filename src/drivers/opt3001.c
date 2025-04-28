@@ -110,9 +110,11 @@ bool sensorOpt3001Init(void)
 {
 	//Disable the sensor
 	sensorOpt3001Enable(false);
-
+	UARTprintf("after the first enable\n");
 	//Enable the sensor
 	sensorOpt3001Enable(true);
+	UARTprintf("after the second enable\n");
+
 
 	return (true);
 }

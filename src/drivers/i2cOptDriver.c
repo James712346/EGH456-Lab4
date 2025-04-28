@@ -20,13 +20,13 @@
 extern SemaphoreHandle_t xI2CSemaphore;
 // Interrupt for I2C 2
 void I2C2IntHandler(void){
-    BaseType_t TaskhasWoken;
+    BaseType_t TaskhasWoken = pdFALSE;
     I2CMasterIntClear(I2C2_BASE);
-    if (!I2CMasterBusy(I2C2_BASE)){
-        xSemaphoreGiveFromISR(xI2CSemaphore, &TaskhasWoken);
-        portYIELD_FROM_ISR(TaskhasWoken);
-    }
-    
+    UARTprintf("the interrupt has fired\n");
+
+    xSemaphoreGiveFromISR(xI2CSemaphore, &TaskhasWoken);
+    portYIELD_FROM_ISR(TaskhasWoken);
+
 }
 
 /*
@@ -36,12 +36,17 @@ void I2C2IntHandler(void){
  */
 bool writeI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data)
 {
+    
     // Load device slave address
     I2CMasterSlaveAddrSet(I2C2_BASE, ui8Addr, false);
-
+    UARTprintf("the slave has been set\n");
     // Place the character to be sent in the data register
     I2CMasterDataPut(I2C2_BASE, ui8Reg);
+    UARTprintf("the master has been set\n");
+
     I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_SEND_START);
+    UARTprintf("the control has been set\n");
+
     xSemaphoreTake(xI2CSemaphore, portMAX_DELAY);
 
     // Send Data
