@@ -183,16 +183,16 @@ void vCreateLEDTask( void )
     // The I2C0 peripheral must be enabled before use.
     //
     UARTprintf("1\n");
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C0);
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C2);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
 
     //
     // Configure the pin muxing for I2C0 functions on port B2 and B3.
     // This step is not necessary if your part does not support pin muxing.
     //
     UARTprintf("2\n");
-    GPIOPinConfigure(GPIO_PB2_I2C0SCL);
-    GPIOPinConfigure(GPIO_PB3_I2C0SDA);
+    GPIOPinConfigure(GPIO_PN4_I2C2SDA);
+    GPIOPinConfigure(GPIO_PN5_I2C2SCL);
 
     //
     // Select the I2C function for these pins.  This function will also
@@ -201,11 +201,11 @@ void vCreateLEDTask( void )
     // to see which functions are allocated per pin.
     //
     UARTprintf("3\n");
-    GPIOPinTypeI2CSCL(GPIO_PORTB_BASE, GPIO_PIN_2);
-    GPIOPinTypeI2C(GPIO_PORTB_BASE, GPIO_PIN_3);
+    GPIOPinTypeI2CSCL(GPIO_PORTN_BASE, GPIO_PIN_5);
+    GPIOPinTypeI2C(GPIO_PORTN_BASE, GPIO_PIN_4);
 
     UARTprintf("3\n");
-    I2CMasterInitExpClk(I2C0_BASE, SysCtlClockGet(), false);
+    I2CMasterInitExpClk(I2C2_BASE, SysCtlClockGet(), false);
 
     //
     // Enable interrupts to the processor.
