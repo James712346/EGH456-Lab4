@@ -207,6 +207,7 @@ bool sensorOpt3001Test(void)
 
 	if (val != MANUFACTURER_ID)
 	{
+        UARTprintf("%c%c =! %c%c\n", (val >> 8) & 0x00FF, val & 0x00FF, (MANUFACTURER_ID >> 8) & 0x00FF, MANUFACTURER_ID&0x00FF);
 		return false;
 	}
 

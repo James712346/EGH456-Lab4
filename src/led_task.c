@@ -211,12 +211,10 @@ void vCreateLEDTask( void )
     GPIOPinTypeI2C(GPIO_PORTN_BASE, GPIO_PIN_4);
 
     UARTprintf("3\n");
-    
     I2CMasterInitExpClk(I2C2_BASE, SysCtlClockGet(), false);
 
     I2CMasterIntEnable(I2C2_BASE);
-    IntEnable(INT_I2C2);
-
+    IntEnable(INT_I2C2); 
     //
     // Enable interrupts to the processor.
     //
