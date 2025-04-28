@@ -17,8 +17,18 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 
+extern SemaphoreHandle_t xI2CSemaphore;
+// Interrupt for I2C 2
+void I2C2IntHandler(void){
+    BaseType_t TaskhasWoken;
+    I2CMasterIntClear(I2C2_BASE);
+    if (!I2CMasterBusy(I2C2_BASE)){
+        xSemaphoreGiveFromISR(xI2CSemaphore, &TaskhasWoken);
+        portYIELD_FROM_ISR(TaskhasWoken);
+    }
+    
+}
 
-SemaphoreHandle_t xI2CSemaphore;
 /*
  * Sets slave address to ui8Addr
  * Puts ui8Reg followed by two data bytes in *data and transfers

@@ -9,5 +9,4 @@ void vCreateLEDTask(void);   // Function to create the LED task
 void ConfigureUART(void);    // UART configuration function
 
 
-
 #endif // LED_TASK_H

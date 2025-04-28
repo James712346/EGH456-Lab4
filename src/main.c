@@ -20,26 +20,27 @@
 // 
 //
 //*****************************************************************************
-
 #include <stdio.h>
-#include <stdint.h>
 #include <stdbool.h>
-#include "inc/hw_memmap.h"
-#include "inc/hw_ints.h"
-#include "driverlib/debug.h"
-#include "driverlib/gpio.h"
-#include "driverlib/interrupt.h"
-#include "driverlib/pin_map.h"
-#include "driverlib/rom.h"
-#include "driverlib/sysctl.h"
-#include "driverlib/uart.h"
-#include "driverlib/i2c.h"
-#include "utils/uartstdio.h"
-#include "utils/ustdlib.h"
-#include "drivers/opt3001.h"
-#include "led_task.h"
+#include <stdint.h>
 
-//*****************************************************************************
+/* Kernel includes. */
+#include "FreeRTOS.h"
+#include "driverlib/timer.h"
+#include "inc/hw_ints.h"
+#include "task.h"
+#include "semphr.h"
+
+/* Hardware includes. */
+#include "inc/hw_memmap.h"
+#include "inc/hw_sysctl.h"
+#include "driverlib/interrupt.h"
+#include "driverlib/rom.h"
+#include "driverlib/rom_map.h"
+#include "driverlib/sysctl.h"
+#include "drivers/rtos_hw_drivers.h"
+/*-----------------------------------------------------------*/
+
 //
 //Light Measurement with the OPT3001
 //
@@ -82,6 +83,7 @@ __error__(char *pcFilename, uint32_t ui32Line)
 
 
 
+SemaphoreHandle_t xI2CSemaphore = NULL;
 
 //*****************************************************************************
 //
@@ -90,6 +92,7 @@ __error__(char *pcFilename, uint32_t ui32Line)
 //*****************************************************************************
 int main(void)
 {
+    xI2CSemaphore = xSemaphoreCreateBinary();
     vCreateLEDTask();
 
 
