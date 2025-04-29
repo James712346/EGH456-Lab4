@@ -74,7 +74,7 @@ void ConfigureUART(void)
     GPIOPinConfigure(GPIO_PA0_U0RX);
     GPIOPinConfigure(GPIO_PA1_U0TX);
     GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
-    UARTStdioConfig(0, 9600, g_ui32SysClock);
+    UARTStdioConfig(0, 576000, g_ui32SysClock);
     SysCtlDelay(g_ui32SysClock);
 }
 
