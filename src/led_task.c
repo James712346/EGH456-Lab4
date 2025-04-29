@@ -64,6 +64,12 @@ static void SensorInitTask(void *pvParameters);
 static void ReadSensor(void *pvParameters);
 void vCreateLEDTask(void);
 
+void GPIOMHandler(void){
+    GPIOIntClear(GPIO_PORTM_BASE, GPIO_PIN_6);
+    UARTprintf("Hello\n");
+}
+
+
 //*****************************************************************************
 // Configure the UART and its pins.  This must be called before UARTprintf().
 //*****************************************************************************
@@ -95,6 +101,7 @@ void vCreateLEDTask(void)
     UARTprintf("1\n");
     SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C2);
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOM);
     while(!SysCtlPeripheralReady(SYSCTL_PERIPH_I2C2));
     while(!SysCtlPeripheralReady(SYSCTL_PERIPH_GPION));
 
@@ -106,12 +113,21 @@ void vCreateLEDTask(void)
     GPIOPinTypeI2CSCL(GPIO_PORTN_BASE, GPIO_PIN_5);
     GPIOPinTypeI2C(GPIO_PORTN_BASE, GPIO_PIN_4);
 
+    // Int Pin M6
+    GPIOPinTypeGPIOInput(GPIO_PORTM_BASE, GPIO_PIN_6);
+    GPIOPadConfigSet(GPIO_PORTM_BASE, GPIO_PIN_6,
+                     GPIO_STRENGTH_2MA,
+                     GPIO_PIN_TYPE_STD_WPU);
+    GPIOIntTypeSet(GPIO_PORTM_BASE, GPIO_PIN_6, GPIO_FALLING_EDGE);
+    GPIOIntEnable(GPIO_PORTM_BASE, GPIO_PIN_6);
+    IntEnable(INT_GPIOM);
+
     UARTprintf("3\n");
     I2CMasterInitExpClk(I2C2_BASE, SysCtlClockGet(), false);
     // Enable the Interrupts
     I2CMasterIntClear(I2C2_BASE);
     I2CMasterIntEnable(I2C2_BASE);
-    IntEnable(INT_I2C2); 
+    IntEnable(INT_I2C2);
 
     UARTprintf("4\n");
     IntMasterEnable();

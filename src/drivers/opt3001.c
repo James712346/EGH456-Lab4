@@ -67,10 +67,10 @@
 #define MANUFACTURER_ID                 0x5449  // ID check = TI
 #define DEVICE_ID                       0x3001  // Device ID = 3001
 
-#define CONFIG_RESET                    0xC810                   
+#define CONFIG_RESET                    0xC810                 
 #define CONFIG_TEST                     0xCC10
 
-#define CONFIG_ENABLE                   0x10C4 // sensor receives this as 0xC410 as upper and lower bytes are received in reverse
+#define CONFIG_ENABLE                   0x10CC // sensor receives this as 0xC410 as upper and lower bytes are received in reverse
 #define CONFIG_DISABLE                  0x10C0 // sensor receives this as 0xC010 as upper and lower bytes are received in reverse
 
 /* Bit values */
@@ -112,10 +112,14 @@ bool sensorOpt3001Init(void)
 	sensorOpt3001Enable(false);
 	UARTprintf("after the first enable\n");
 	//Enable the sensor
-	sensorOpt3001Enable(true);
 	UARTprintf("after the second enable\n");
-
-
+    // Set the upper and low registers
+    uint16_t val;
+    val = 0xFF0F; // 0x0FFF [15:13] 0 [12:0] set to 4095 -> 40.95 
+    writeI2C(OPT3001_I2C_ADDRESS, REG_LOW_LIMIT, (uint8_t*)&val);
+    val = 0x6480; // 0x8064 [15:13] 8 [12:0] set to 100 -> 256 = 0.1 * 2^8 + 100
+    writeI2C(OPT3001_I2C_ADDRESS, REG_HIGH_LIMIT, (uint8_t*)&val); 
+	sensorOpt3001Enable(true);
 	return (true);
 }
 
