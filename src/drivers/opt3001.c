@@ -140,7 +140,9 @@ void sensorOpt3001Enable(bool enable)
 		val = CONFIG_DISABLE;
 	}
 
-	writeI2C(OPT3001_I2C_ADDRESS, REG_CONFIGURATION, (uint8_t*)&val);
+	if (!writeI2C(OPT3001_I2C_ADDRESS, REG_CONFIGURATION, (uint8_t*)&val)){
+        UARTprintf("ERROR when Writing");
+    };
 }
 
 
@@ -207,6 +209,8 @@ bool sensorOpt3001Test(void)
 
 	if (val != MANUFACTURER_ID)
 	{
+        UARTprintf("%c%c =! %c%c\n", (val >> 8) & 0x00FF, val & 0x00FF, (MANUFACTURER_ID >> 8) & 0x00FF, MANUFACTURER_ID&0x00FF);
+
 		return false;
 	}
 

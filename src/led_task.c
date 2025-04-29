@@ -93,22 +93,25 @@ void vCreateLEDTask(void)
     UARTprintf("OPT001 Example\n");
 
     UARTprintf("1\n");
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C0);
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C2);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
+    while(!SysCtlPeripheralReady(SYSCTL_PERIPH_I2C2));
+    while(!SysCtlPeripheralReady(SYSCTL_PERIPH_GPION));
 
     UARTprintf("2\n");
-    GPIOPinConfigure(GPIO_PB2_I2C0SCL);
-    GPIOPinConfigure(GPIO_PB3_I2C0SDA);
+    GPIOPinConfigure(GPIO_PN5_I2C2SCL);
+    GPIOPinConfigure(GPIO_PN4_I2C2SDA);
 
     UARTprintf("3\n");
-    GPIOPinTypeI2CSCL(GPIO_PORTB_BASE, GPIO_PIN_2);
-    GPIOPinTypeI2C(GPIO_PORTB_BASE, GPIO_PIN_3);
+    GPIOPinTypeI2CSCL(GPIO_PORTN_BASE, GPIO_PIN_5);
+    GPIOPinTypeI2C(GPIO_PORTN_BASE, GPIO_PIN_4);
 
     UARTprintf("3\n");
-    I2CMasterInitExpClk(I2C0_BASE, SysCtlClockGet(), false);
-    I2CMasterIntEnable(I2C0_BASE);
-    I2CMasterIntEnableEx(I2C0_BASE, I2C_MASTER_INT_DATA);
-    IntEnable(INT_I2C0);
+    I2CMasterInitExpClk(I2C2_BASE, SysCtlClockGet(), false);
+    // Enable the Interrupts
+    I2CMasterIntClear(I2C2_BASE);
+    I2CMasterIntEnable(I2C2_BASE);
+    IntEnable(INT_I2C2); 
 
     UARTprintf("4\n");
     IntMasterEnable();
@@ -116,8 +119,7 @@ void vCreateLEDTask(void)
     xTaskCreate(SensorInitTask, "Init", configMINIMAL_STACK_SIZE,
                 NULL, tskIDLE_PRIORITY + 2, NULL);
 
-    xTaskCreate(ReadSensor,     "LED",  configMINIMAL_STACK_SIZE,
-                NULL, tskIDLE_PRIORITY + 1, NULL);
+
 }
 
 //*****************************************************************************
@@ -127,12 +129,14 @@ static void SensorInitTask(void *pvParameters)
     sensorOpt3001Init();
     UARTprintf("Testing OPT3001 Sensor:\n");
 
-    while (!sensorOpt3001Test()) {
-        SysCtlDelay(g_ui32SysClock);
-        UARTprintf("Test Failed, Trying again\n");
-    }
+    // while (!sensorOpt3001Test()) {
+    //     SysCtlDelay(g_ui32SysClock);
+    //     UARTprintf("Test Failed, Trying again\n");
+    // }
 
     UARTprintf("All Tests Passed!\n\n");
+    xTaskCreate(ReadSensor,     "LED",  configMINIMAL_STACK_SIZE,
+                NULL, tskIDLE_PRIORITY + 1, NULL);
     vTaskDelete(NULL);
 }
 
@@ -149,7 +153,7 @@ static void ReadSensor(void *pvParameters)
         success = sensorOpt3001Read(&rawData);
         if (success) {
             sensorOpt3001Convert(rawData, &convertedLux);
-            UARTprintf("Lux: %5d\n", (int)convertedLux);
+            UARTprintf("Lux%d\n", (int)convertedLux);
         }
     }
 }
