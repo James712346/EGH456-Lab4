@@ -152,6 +152,7 @@ static void ReadSensor(void *pvParameters)
     float convertedLux;
     uint8_t sw_state1;
     uint8_t sw_state2;
+    bool on = false;
     sensorOpt3001Init();
     while (!sensorOpt3001Test()) {
         SysCtlDelay(g_ui32SysClock);
@@ -160,26 +161,32 @@ static void ReadSensor(void *pvParameters)
 
     for (;;) {
         vTaskDelay(pdMS_TO_TICKS(100));
-    
+        
         bool button0 = !(GPIOPinRead(GPIO_PORTJ_BASE, GPIO_PIN_0) & GPIO_PIN_0);
         bool button1 = !(GPIOPinRead(GPIO_PORTJ_BASE, GPIO_PIN_1) & GPIO_PIN_1);
     
-        if (button0 || button1) {
+        if (button0 || button1) 
+        {
+            if(on ==false)
+            {
+                on = true;
+            }
+            else{
+                on = false;
+            }
 
-            vTaskDelay(pdMS_TO_TICKS(50));
-            if (button0 || button1) {
-                uint16_t raw;
-                if (sensorOpt3001Read(&raw)) {
-                    float lux;
-                    sensorOpt3001Convert(raw, &lux);
-                    UARTprintf("Lux: %5d\n", (int)lux);
-                }
-                while (!(GPIOPinRead(GPIO_PORTJ_BASE, GPIO_PIN_0) & GPIO_PIN_0)
-                       || !(GPIOPinRead(GPIO_PORTJ_BASE, GPIO_PIN_1) & GPIO_PIN_1)) {
-                    vTaskDelay(pdMS_TO_TICKS(10));
-                }
+        }   
+        if(on) {
+            uint16_t raw;
+            if (sensorOpt3001Read(&raw)) {
+                float lux;
+                sensorOpt3001Convert(raw, &lux);
+                UARTprintf("Lux: %5d\n", (int)lux);
+            }
+            while (!(GPIOPinRead(GPIO_PORTJ_BASE, GPIO_PIN_0) & GPIO_PIN_0)
+                    || !(GPIOPinRead(GPIO_PORTJ_BASE, GPIO_PIN_1) & GPIO_PIN_1)) {
+                vTaskDelay(pdMS_TO_TICKS(10));
             }
         }
     }
-    
 }
