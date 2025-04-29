@@ -107,7 +107,7 @@ void vCreateLEDTask(void)
     UARTprintf("3\n");
     I2CMasterInitExpClk(I2C0_BASE, SysCtlClockGet(), false);
     I2CMasterIntEnable(I2C0_BASE);
-    I2CMasterIntEnableEx(I2C0_BASE, I2C_MASTER_INT_DATA);
+    I2CMasterIntEnableEx(I2C0_BASE, I2C_MASTER_INT_DATA |I2C_MASTER_INT_STOP);
     IntEnable(INT_I2C0);
 
     UARTprintf("4\n");
