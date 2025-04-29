@@ -18,45 +18,50 @@
 #include "semphr.h"
 
 extern SemaphoreHandle_t xI2CSemaphore;
+extern SemaphoreHandle_t xI2CBusSemaphore;
+
 // Interrupt for I2C 2
-void I2C2IntHandler(void){
-    BaseType_t TaskhasWoken = pdFALSE;
-    I2CMasterIntClear(I2C2_BASE);
-    UARTprintf("the interrupt has fired\n");
+void I2C0IntHandler(void) {
+    // UARTprintf("isr called\n");
+    BaseType_t woken = pdFALSE;
+    uint32_t status = I2CMasterIntStatusEx(I2C0_BASE, true);
 
-    xSemaphoreGiveFromISR(xI2CSemaphore, &TaskhasWoken);
-    portYIELD_FROM_ISR(TaskhasWoken);
+    // signal on DATA or STOP only
+    if (status & I2C_MASTER_INT_DATA) {
+        xSemaphoreGiveFromISR(xI2CSemaphore, &woken);
+    }
+    if (status & I2C_MASTER_INT_STOP) {
+        xSemaphoreGiveFromISR(xI2CSemaphore, &woken);
+    }
 
+    // clear whatever caused the interrupt
+    I2CMasterIntClearEx(I2C0_BASE, status);
+    portYIELD_FROM_ISR(woken);
 }
 
-/*
- * Sets slave address to ui8Addr
- * Puts ui8Reg followed by two data bytes in *data and transfers
- * over i2c
- */
+
+
 bool writeI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data)
-{
-    
+{   
+    // UARTprintf("write called\n");
+
+    xSemaphoreTake(xI2CSemaphore,portMAX_DELAY);
     // Load device slave address
-    I2CMasterSlaveAddrSet(I2C2_BASE, ui8Addr, false);
-    UARTprintf("the slave has been set\n");
+    I2CMasterSlaveAddrSet(I2C0_BASE, ui8Addr, false);
+
     // Place the character to be sent in the data register
-    I2CMasterDataPut(I2C2_BASE, ui8Reg);
-    UARTprintf("the master has been set\n");
-
-    I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_SEND_START);
-    UARTprintf("the control has been set\n");
-
-    xSemaphoreTake(xI2CSemaphore, portMAX_DELAY);
+    I2CMasterDataPut(I2C0_BASE, ui8Reg);
+    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_START);
+    xSemaphoreTake(xI2CSemaphore,portMAX_DELAY);
 
     // Send Data
-    I2CMasterDataPut(I2C2_BASE, data[0]);
-    I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_SEND_CONT);
-    xSemaphoreTake(xI2CSemaphore, portMAX_DELAY);
+    I2CMasterDataPut(I2C0_BASE, data[0]);
+    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_CONT);
 
-    I2CMasterDataPut(I2C2_BASE, data[1]);
-    I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_SEND_FINISH);
-    xSemaphoreTake(xI2CSemaphore, portMAX_DELAY);
+    xSemaphoreTake(xI2CSemaphore,portMAX_DELAY);
+
+    I2CMasterDataPut(I2C0_BASE, data[1]);
+    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_FINISH);
 
     return true;
 }
@@ -72,27 +77,31 @@ bool writeI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data)
  */
 bool readI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data)
 {
+    // UARTprintf("read called\n");
+
     // Load device slave address and change I2C to write
-    I2CMasterSlaveAddrSet(I2C2_BASE, ui8Addr, false);
+    I2CMasterSlaveAddrSet(I2C0_BASE, ui8Addr, false);
 
     // Place the character to be sent in the data register
-    I2CMasterDataPut(I2C2_BASE, ui8Reg);
-    I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_SINGLE_SEND);
-    xSemaphoreTake(xI2CSemaphore, portMAX_DELAY);
+    I2CMasterDataPut(I2C0_BASE, ui8Reg);
+    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_SEND);
+    xSemaphoreTake(xI2CSemaphore,portMAX_DELAY);
 
     // Load device slave address and change I2C to read
-    I2CMasterSlaveAddrSet(I2C2_BASE, ui8Addr, true);
+    I2CMasterSlaveAddrSet(I2C0_BASE, ui8Addr, true);
 
     // Read two bytes from I2C
-    I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_RECEIVE_START);
-    xSemaphoreTake(xI2CSemaphore, portMAX_DELAY);
-    data[0] = I2CMasterDataGet(I2C2_BASE);
+    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_START);
+    xSemaphoreTake(xI2CSemaphore,portMAX_DELAY);
+    data[0] = I2CMasterDataGet(I2C0_BASE);
 
-    I2CMasterControl(I2C2_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
-    xSemaphoreTake(xI2CSemaphore, portMAX_DELAY);
-    data[1] = I2CMasterDataGet(I2C2_BASE);
+    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
+    xSemaphoreTake(xI2CSemaphore,portMAX_DELAY);
+    data[1] = I2CMasterDataGet(I2C0_BASE);
 
     return true;
 }
+
+
 
 

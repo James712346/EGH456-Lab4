@@ -34,34 +34,12 @@
  *
 */
 
-/******************************************************************************
- *
- * vLEDTask turns on the initial LED, configurations the buttons, and creates
- * prvProcessSwitchInputTask which handles processing the ISR result to adjust
- * the LED per the button inputs.
- *
- * prvProcessSwitchInputTask uses semaphore take to wait until it receives a
- * semaphore from the button ISR.  Once it does, then it processes the button
- * pressed.  Each time the SW1 or SW2 button is pressed, the LED index is
- * updated based on which button has been pressed and the corresponding LED
- * lights up.
- *
- * When either user switch SW1 or SW2 on the EK-TM4C1294XL is pressed, an
- * interrupt is generated and the switch pressed is logged in the global
- * variable g_pui32ButtonPressed.  Then the binary semaphore is given to
- * prvProcessSwitchInputTask before yielding to it.  This is an example of
- * using binary semaphores to defer ISR processing to a task.
- *
- */
-
-/* Standard includes. */
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 
 /* Kernel includes. */
 #include "FreeRTOS.h"
-#include "portmacro.h"
 #include "task.h"
 #include "semphr.h"
 
@@ -71,225 +49,107 @@
 #include "driverlib/gpio.h"
 #include "driverlib/interrupt.h"
 #include "driverlib/sysctl.h"
-#include "drivers/rtos_hw_drivers.h"
-
-#include <stdio.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include "inc/hw_memmap.h"
-#include "inc/hw_ints.h"
-#include "driverlib/debug.h"
 #include "driverlib/pin_map.h"
-#include "driverlib/rom.h"
-#include "driverlib/uart.h"
 #include "driverlib/i2c.h"
 #include "utils/uartstdio.h"
-#include "utils/ustdlib.h"
+
 #include "drivers/opt3001.h"
+
 #define SYSTICKS_PER_SECOND     1
 #define SYSTICK_PERIOD_MS       (1000 / SYSTICKS_PER_SECOND)
-/*-----------------------------------------------------------*/
 
-/*
- * Time stamp global variable.
- */
-volatile uint32_t g_ui32TimeStamp = 0;
-
-/*
- * Global variable to log the last GPIO button pressed.
- */
-volatile static uint32_t g_pui32ButtonPressed = NULL;
-
-/*
- * The binary semaphore used by the switch ISR & task.
- */
-
-volatile uint8_t ui8LEDIndex = 0;
 volatile uint32_t g_ui32SysClock;
 
-/*
- * The tasks as described in the comments at the top of this file.
- */
-
-static void ReadSensor( void *pvParameters );
-
-
-/*
- * Called by main() to do example specific hardware configurations and to
- * create the Process Switch task.
- */
-void vCreateLEDTask( void );
-
-
+static void SensorInitTask(void *pvParameters);
+static void ReadSensor(void *pvParameters);
+void vCreateLEDTask(void);
 
 //*****************************************************************************
-//
 // Configure the UART and its pins.  This must be called before UARTprintf().
-//
 //*****************************************************************************
 void ConfigureUART(void)
 {
-    //
-    // Enable the GPIO Peripheral used by the UART.
-    //
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
-
-    //
-    // Enable UART0
-    //
     SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
-
-    //
-    // Configure GPIO Pins for UART mode.
-    //
     GPIOPinConfigure(GPIO_PA0_U0RX);
     GPIOPinConfigure(GPIO_PA1_U0TX);
     GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
-
-    //
-    // Initialize the UART for console I/O.
-    //
     UARTStdioConfig(0, 9600, g_ui32SysClock);
-
-    SysCtlDelay(g_ui32SysClock); // ~1 second delay at 120MHz to ensure UART initialises before using UARTprintf
+    SysCtlDelay(g_ui32SysClock);
 }
 
-/*-----------------------------------------------------------*/
-
-void vCreateLEDTask( void )
+//*****************************************************************************
+void vCreateLEDTask(void)
 {
-    bool      success;
-    uint16_t  rawData = 0;
-    float     convertedLux = 0;
+    bool success;
 
-    //
-    // Configure the system frequency.
-    //
     g_ui32SysClock = SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
-                                             SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
-                                             SYSCTL_CFG_VCO_480), 120000000);
+                                         SYSCTL_OSC_MAIN   |
+                                         SYSCTL_USE_PLL    |
+                                         SYSCTL_CFG_VCO_480),
+                                         120000000);
 
-
-    //
-    // Initialize the UART.
-    //
     ConfigureUART();
-    
-
-    //
-    // Clear the terminal and print the welcome message.
-    //
     UARTprintf("OPT001 Example\n");
 
-    //
-    // The I2C0 peripheral must be enabled before use.
-    //
-    SysCtlPeripheralReset(SYSCTL_PERIPH_I2C2);
     UARTprintf("1\n");
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C2);
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C0);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
 
-    while(!SysCtlPeripheralReady(SYSCTL_PERIPH_I2C2));
-    while(!SysCtlPeripheralReady(SYSCTL_PERIPH_GPION));
-
-    //
-    // Configure the pin muxing for I2C0 functions on port B2 and B3.
-    // This step is not necessary if your part does not support pin muxing.
-    //
     UARTprintf("2\n");
-    GPIOPinConfigure(GPIO_PN4_I2C2SDA);
-    GPIOPinConfigure(GPIO_PN5_I2C2SCL);
-
-    //
-    // Select the I2C function for these pins.  This function will also
-    // configure the GPIO pins pins for I2C operation, setting them to
-    // open-drain operation with weak pull-ups.  Consult the data sheet
-    // to see which functions are allocated per pin.
-    //
-    UARTprintf("3\n");
-    GPIOPinTypeI2CSCL(GPIO_PORTN_BASE, GPIO_PIN_5);
-    GPIOPinTypeI2C(GPIO_PORTN_BASE, GPIO_PIN_4);
+    GPIOPinConfigure(GPIO_PB2_I2C0SCL);
+    GPIOPinConfigure(GPIO_PB3_I2C0SDA);
 
     UARTprintf("3\n");
-    
-    I2CMasterInitExpClk(I2C2_BASE, SysCtlClockGet(), false);
+    GPIOPinTypeI2CSCL(GPIO_PORTB_BASE, GPIO_PIN_2);
+    GPIOPinTypeI2C(GPIO_PORTB_BASE, GPIO_PIN_3);
 
-    I2CMasterIntEnable(I2C2_BASE);
-    IntEnable(INT_I2C2);
+    UARTprintf("3\n");
+    I2CMasterInitExpClk(I2C0_BASE, SysCtlClockGet(), false);
+    I2CMasterIntEnable(I2C0_BASE);
+    I2CMasterIntEnableEx(I2C0_BASE, I2C_MASTER_INT_DATA);
+    IntEnable(INT_I2C0);
 
-    //
-    // Enable interrupts to the processor.
-    //
     UARTprintf("4\n");
     IntMasterEnable();
 
-    //Initialise sensor
+    xTaskCreate(SensorInitTask, "Init", configMINIMAL_STACK_SIZE,
+                NULL, tskIDLE_PRIORITY + 2, NULL);
+
+    xTaskCreate(ReadSensor,     "LED",  configMINIMAL_STACK_SIZE,
+                NULL, tskIDLE_PRIORITY + 1, NULL);
+}
+
+//*****************************************************************************
+static void SensorInitTask(void *pvParameters)
+{
     UARTprintf("5\n");
     sensorOpt3001Init();
-
-    // Test that sensor is set up correctly
     UARTprintf("Testing OPT3001 Sensor:\n");
-    success = sensorOpt3001Test();
 
-    //stay here until sensor is working
-    while (!success) {
+    while (!sensorOpt3001Test()) {
         SysCtlDelay(g_ui32SysClock);
         UARTprintf("Test Failed, Trying again\n");
-        success = sensorOpt3001Test();
     }
 
     UARTprintf("All Tests Passed!\n\n");
-
- 
-
-
-    /* Create the task as described in the comments at the top of this file.
-     *
-     * The xTaskCreate parameters in order are:
-     *  - The function that implements the task.
-     *  - The text name for the LED Task - for debug only as it is not used by
-     *    the kernel.
-     *  - The size of the stack to allocate to the task.
-     *  - The parameter passed to the task - just to check the functionality.
-     *  - The priority assigned to the task.
-     *  - The task handle is not required, so NULL is passed. */
-    xTaskCreate( ReadSensor,
-                 "LED",
-                 configMINIMAL_STACK_SIZE,
-                 NULL,
-                 tskIDLE_PRIORITY + 1,
-                 NULL );
-
+    vTaskDelete(NULL);
 }
-/*-----------------------------------------------------------*/
 
+//*****************************************************************************
+static void ReadSensor(void *pvParameters)
+{
+    bool success;
+    uint16_t rawData = 0;
+    float convertedLux = 0;
 
+    while (1) {
+        SysCtlDelay(g_ui32SysClock / 100);
 
-static void ReadSensor(void *pvParameters){
-    bool      success;
-    uint16_t  rawData = 0;
-    float     convertedLux = 0;
-    // Loop Forever
-    while(1)
-    {
-        SysCtlDelay(g_ui32SysClock/100);
-
-        //Read and convert OPT values
         success = sensorOpt3001Read(&rawData);
-
         if (success) {
             sensorOpt3001Convert(rawData, &convertedLux);
-
-            // Construct Text
-            int lux_int = (int)convertedLux;
-            UARTprintf("Lux: %5d\n", lux_int);
+            UARTprintf("Lux: %5d\n", (int)convertedLux);
         }
-
     }
 }
-
-
-
-
-
-

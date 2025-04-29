@@ -93,6 +93,7 @@ SemaphoreHandle_t xI2CSemaphore = NULL;
 int main(void)
 {
     xI2CSemaphore = xSemaphoreCreateBinary();
+    xSemaphoreGive(xI2CSemaphore);
     vCreateLEDTask();
 
 
