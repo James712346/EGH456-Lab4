@@ -131,10 +131,6 @@ void vCreateLEDTask(void)
     UARTprintf("3\n");
     I2CMasterInitExpClk(I2C2_BASE, SysCtlClockGet(), false);
     // Enable the Interrupts
-    I2CMasterIntClear(I2C2_BASE);
-    I2CMasterIntEnable(I2C2_BASE);
-    IntEnable(INT_I2C2);
-
     UARTprintf("4\n");
     IntMasterEnable();
 
@@ -180,7 +176,7 @@ static void ReadSensor(void *pvParameters)
             if (convertedLux >= 2560 || convertedLux <= 40.95){
                 continue;
             }
-            UARTprintf("Lux%d\n", (int)convertedLux);
+            UARTprintf("Lux %d.%02d\n", (int)convertedLux, (int)((convertedLux - (int) convertedLux) * 100));
         }
     }
 }
@@ -199,9 +195,9 @@ static void AlertTask(void){
         if (success) {
             sensorOpt3001Convert(rawData, &convertedLux);
             if (convertedLux >= 2560){
-                UARTprintf("High Light Event:%d Lux\n", (int)convertedLux);
+                UARTprintf("High Light Event: %d.%02d Lux\n", (int)convertedLux, (int)((convertedLux - (int) convertedLux) * 100));
             } else {
-                UARTprintf("Low Light Event:%d Lux\n", (int)convertedLux);
+                UARTprintf("Low Light Event: %d.%02d Lux\n", (int)convertedLux, (int)((convertedLux - (int) convertedLux) * 100));
             }
         }
 
