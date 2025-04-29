@@ -24,7 +24,6 @@
 // ----------------------- Exported prototypes -----------------------
 extern bool writeI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *Data);
 extern bool readI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *Data);
-extern void I2C2IntHandler(void);
 
 
 #endif /* _I2COPTDRIVER_H_ */

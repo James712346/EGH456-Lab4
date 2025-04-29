@@ -117,7 +117,7 @@ bool sensorOpt3001Init(void)
     uint16_t val;
     val = 0xFF0F; // 0x0FFF [15:13] 0 [12:0] set to 4095 -> 40.95 
     writeI2C(OPT3001_I2C_ADDRESS, REG_LOW_LIMIT, (uint8_t*)&val);
-    val = 0x6480; // 0x8064 [15:13] 8 [12:0] set to 100 -> 256 = 0.1 * 2^8 + 100
+    val = 0xE883; // 0x8064 [15:13] 8 [12:0] set to 1000 -> 2560 = 0.1 * 2^8 + 1000
     writeI2C(OPT3001_I2C_ADDRESS, REG_HIGH_LIMIT, (uint8_t*)&val); 
 	sensorOpt3001Enable(true);
 	return (true);

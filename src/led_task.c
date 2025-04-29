@@ -40,6 +40,8 @@
 
 /* Kernel includes. */
 #include "FreeRTOS.h"
+#include "portmacro.h"
+#include "projdefs.h"
 #include "task.h"
 #include "semphr.h"
 
@@ -60,13 +62,17 @@
 
 volatile uint32_t g_ui32SysClock;
 
+extern SemaphoreHandle_t xI2CSemaphore;
 static void SensorInitTask(void *pvParameters);
 static void ReadSensor(void *pvParameters);
+static void AlertTask(void);
 void vCreateLEDTask(void);
 
 void GPIOMHandler(void){
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     GPIOIntClear(GPIO_PORTM_BASE, GPIO_PIN_6);
-    UARTprintf("Hello\n");
+    xSemaphoreGiveFromISR(xI2CSemaphore, &xHigherPriorityTaskWoken);
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 
@@ -153,6 +159,8 @@ static void SensorInitTask(void *pvParameters)
     UARTprintf("All Tests Passed!\n\n");
     xTaskCreate(ReadSensor,     "LED",  configMINIMAL_STACK_SIZE,
                 NULL, tskIDLE_PRIORITY + 1, NULL);
+    xTaskCreate(AlertTask,     "AlertLED",  configMINIMAL_STACK_SIZE,
+                NULL, tskIDLE_PRIORITY + 1, NULL);
     vTaskDelete(NULL);
 }
 
@@ -169,7 +177,33 @@ static void ReadSensor(void *pvParameters)
         success = sensorOpt3001Read(&rawData);
         if (success) {
             sensorOpt3001Convert(rawData, &convertedLux);
+            if (convertedLux >= 2560 || convertedLux <= 40.95){
+                continue;
+            }
             UARTprintf("Lux%d\n", (int)convertedLux);
         }
+    }
+}
+
+static void AlertTask(void){
+    bool success;
+    uint16_t rawData = 0;
+    float convertedLux = 0;
+
+    while (1) {
+        SysCtlDelay(g_ui32SysClock / 100);
+        if (xSemaphoreTake(xI2CSemaphore, portMAX_DELAY) != pdTRUE){
+            continue;
+        }
+        success = sensorOpt3001Read(&rawData);
+        if (success) {
+            sensorOpt3001Convert(rawData, &convertedLux);
+            if (convertedLux >= 2560){
+                UARTprintf("High Light Event:%d Lux\n", (int)convertedLux);
+            } else {
+                UARTprintf("Low Light Event:%d Lux\n", (int)convertedLux);
+            }
+        }
+
     }
 }

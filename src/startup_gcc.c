@@ -59,7 +59,6 @@ extern int main(void);
 //
 //*****************************************************************************
 static uint32_t pui32Stack[256];
-extern void I2C2IntHandler(void);
 
 //*****************************************************************************
 //
@@ -148,7 +147,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // UART5 Rx and Tx
     IntDefaultHandler,                      // UART6 Rx and Tx
     IntDefaultHandler,                      // UART7 Rx and Tx
-    I2C2IntHandler,                         // I2C2 Master and Slave
+    IntDefaultHandler,                         // I2C2 Master and Slave
     IntDefaultHandler,                      // I2C3 Master and Slave
     IntDefaultHandler,                      // Timer 4 subtimer A
     IntDefaultHandler,                      // Timer 4 subtimer B

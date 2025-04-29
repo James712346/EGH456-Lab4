@@ -84,7 +84,6 @@ __error__(char *pcFilename, uint32_t ui32Line)
 
 
 SemaphoreHandle_t xI2CSemaphore = NULL;
-SemaphoreHandle_t xI2CBusSemaphore = NULL;
 
 //*****************************************************************************
 //
@@ -94,7 +93,6 @@ SemaphoreHandle_t xI2CBusSemaphore = NULL;
 int main(void)
 {
     xI2CSemaphore = xSemaphoreCreateBinary();
-    xI2CBusSemaphore = xSemaphoreCreateBinary();
     xSemaphoreGive(xI2CSemaphore);
     vCreateLEDTask();
 
